@@ -14,16 +14,19 @@ public static class HierarchyIconDrawer
 {
     private sealed class CacheData
     {
-        public int StartIdx;
-        public int Count; 
+        public int    StartIdx;
+        public int    Count;
+        public string Name;
     }
 
 
     //===================================================
     //////                Fields...                //////
     ///==================================================
+    private const float  _IconSize  = 20f;
     private const string _AssetName = "HierarchyIconDrawerData.asset";
 
+    private static GUIContent                 _sharedContent = new GUIContent();
     private static HierarchyIConDrawerAsset   _asset;
     private static Dictionary<int, CacheData> _cacheMap  = new Dictionary<int, CacheData>();
     private static List<int>                  _cacheList = new List<int>();
@@ -60,13 +63,41 @@ public static class HierarchyIconDrawer
          * ******/
         if (_cacheMap.ContainsKey(instanceID) == false) return;
 
-        CacheData data       = _cacheMap[instanceID];
-        int       showCount  = 0;
-        int       goalIdx    = (data.StartIdx+data.Count);
+        CacheData data = _cacheMap[instanceID];
 
-        for(int i=data.StartIdx; i<goalIdx; i++){
+        int   showCount  = 0;
+        int   goalIdx    = (data.StartIdx+data.Count);
+        float iconX      = selectionRect.xMax;
+        float moveOffset = -20f; 
 
-            Rect iconRect = new Rect( selectionRect.xMax - (20 * showCount++), selectionRect.y, 16, 16);
+        /**나머지 정렬방식을 적용한다....**/
+        switch(_asset.Aligment)
+        {
+            case (HierarchyIConDrawerAsset.AligmentType.Middle):{
+               _sharedContent.text = data.Name;
+
+               float middleWidth = (selectionRect.xMax*.6f); 
+               float nameWidth   = (EditorStyles.label.CalcSize(_sharedContent).x + selectionRect.x + _IconSize);
+
+               iconX = (nameWidth < middleWidth? middleWidth:nameWidth);
+               moveOffset = 20f;
+               break;
+            }
+
+            case (HierarchyIConDrawerAsset.AligmentType.Left):{
+               _sharedContent.text = data.Name;
+               iconX = (EditorStyles.label.CalcSize(_sharedContent).x + selectionRect.x + _IconSize);
+               moveOffset = 20f;
+               break;
+            }
+        }
+
+
+
+        /**모든 아이콘들을 차례대로 표시한다....**/
+        for(int i=data.StartIdx; i<goalIdx; i++)
+        {
+            Rect iconRect = new Rect( iconX + (moveOffset * showCount++), selectionRect.y, 16, 16);
             GUI.DrawTexture(iconRect, _asset.IconList[_cacheList[i]].Icon);
         }
         #endregion
@@ -140,7 +171,7 @@ public static class HierarchyIconDrawer
 
             /**캐싱할 정보가 있다면 추가한다...*/
             if (drawCount>0){
-                _cacheMap.Add(currObj.GetInstanceID(), new CacheData() { StartIdx=startIdx, Count=drawCount });
+                _cacheMap.Add(currObj.GetInstanceID(), new CacheData() { StartIdx=startIdx, Count=drawCount, Name=currObj.name });
             }
 
             startIdx += drawCount;

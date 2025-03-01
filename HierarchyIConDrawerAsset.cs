@@ -13,7 +13,13 @@ public class HierarchyIConDrawerAsset : ScriptableObject
         public Texture2D Icon;
     }
 
-    public bool           ShowIcon = true;
-    public List<IconData> IconList = new List<IconData>();
+    public enum AligmentType
+    {
+        Right, Left, Middle
+    }
+
+    public bool           ShowIcon  = true;
+    public AligmentType   Aligment  = AligmentType.Right;
+    public List<IconData> IconList  = new List<IconData>();
 }
 #endif

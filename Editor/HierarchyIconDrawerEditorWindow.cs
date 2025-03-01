@@ -70,11 +70,16 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
                 /**========================================**/
                 using (var scope = new EditorGUI.ChangeCheckScope())
                 {
-                    _asset.ShowIcon = EditorGUILayout.ToggleLeft("Show Icon", _asset.ShowIcon);
+                    _asset.ShowIcon = EditorGUILayout.Toggle("Show Icon", _asset.ShowIcon);
+
+                    _asset.Aligment = (HierarchyIConDrawerAsset.AligmentType)EditorGUILayout.EnumPopup("aligment", _asset.Aligment, GUILayout.Width(300f));
 
                     GUI_ApplyPicker();
 
-                    EditorGUILayout.HelpBox("Please specify the types of icons to be displayed in the Hierarchy window and assign each icon to its corresponding Component.", MessageType.Info);
+                    /**처음 사용하는이를 위한 헬프박스를 표시한다....**/
+                    if (_asset.IconList.Count == 0){
+                        EditorGUILayout.HelpBox("Please specify the types of icons to be displayed in the Hierarchy window and assign each icon to its corresponding Component.", MessageType.Info);
+                    }
 
                     _list.DoLayoutList();
 
