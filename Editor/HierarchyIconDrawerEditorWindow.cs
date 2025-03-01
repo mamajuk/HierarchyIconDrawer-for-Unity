@@ -377,7 +377,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
         return AppDomain.CurrentDomain
                     .GetAssemblies()
                     .SelectMany(assembly => assembly.GetTypes())
-                    .Where(type => type.IsSubclassOf(typeof(MonoBehaviour)))
+                    .Where(type => type.IsSubclassOf(typeof(Component)))
                     .ToList();
         #endregion
     }
