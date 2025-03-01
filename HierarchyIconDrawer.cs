@@ -16,6 +16,7 @@ public static class HierarchyIconDrawer
     {
         public int    StartIdx;
         public int    Count;
+        public float  Offset;
         public string Name;
     }
 
@@ -72,7 +73,7 @@ public static class HierarchyIconDrawer
 
         int   showCount  = 0;
         int   goalIdx    = (data.StartIdx+data.Count);
-        float iconX      = selectionRect.xMax;
+        float iconX      = (selectionRect.xMax - data.Offset);
         float moveOffset = -20f; 
 
         /**나머지 정렬방식을 적용한다....**/
@@ -175,7 +176,8 @@ public static class HierarchyIconDrawer
 
             /**캐싱할 정보가 있다면 추가한다...*/
             if (drawCount>0){
-                _cacheMap.Add(currObj.GetInstanceID(), new CacheData() { StartIdx=startIdx, Count=drawCount, Name=currObj.name });
+                bool isPrefab = (PrefabUtility.GetPrefabAssetType(currObj) != PrefabAssetType.NotAPrefab);
+                _cacheMap.Add(currObj.GetInstanceID(), new CacheData() { StartIdx=startIdx, Count=drawCount, Name=currObj.name, Offset=(isPrefab?20f:0f) });
             }
 
             startIdx += drawCount;
