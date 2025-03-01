@@ -25,7 +25,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
     private static List<System.Type> _classList;
 
 
-    /**content fields....**/
+    /**gui fields....**/
     private HierarchyIConDrawerAsset _asset;
     private GUIContent               _classContent;
     private GUIContent               _searchContent;
@@ -33,6 +33,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
 
     private SerializedObject  _assetObject;
     private ReorderableList   _list;
+    private Vector2           _scrollPos            = Vector2.zero;
     private int               _lastSelectedIconIdx  = -1,
                               _lastSelectedClassIdx = -1;
 
@@ -58,39 +59,40 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
     {
         if (GUI_Initialized()==false) return;
 
-
-        /*************************************************
-         *     아이콘 편집기를 표시한다.....
-         * *****/
-        using (var disable = new EditorGUI.DisabledGroupScope(_showWnd))
+        using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPos, false, true))
         {
-            using (var scope = new EditorGUI.ChangeCheckScope()) 
+            _scrollPos = scroll.scrollPosition;
+
+            /**-------------------------------------**/
+            EditorGUI.BeginDisabledGroup(_showWnd);
             {
-                _asset.ShowIcon = EditorGUILayout.ToggleLeft("Show Icon", _asset.ShowIcon);
 
-                GUI_ApplyPicker();
+                /**========================================**/
+                using (var scope = new EditorGUI.ChangeCheckScope())
+                {
+                    _asset.ShowIcon = EditorGUILayout.ToggleLeft("Show Icon", _asset.ShowIcon);
 
-                EditorGUILayout.HelpBox("Please specify the types of icons to be displayed in the Hierarchy window and assign each icon to its corresponding Component.", MessageType.Info);
+                    GUI_ApplyPicker();
 
-                _list.DoLayoutList();
+                    EditorGUILayout.HelpBox("Please specify the types of icons to be displayed in the Hierarchy window and assign each icon to its corresponding Component.", MessageType.Info);
 
-                /**배열의 크기가 32개를 초과했는가?**/
-                if(_asset.IconList.Count > 32){
-                    _asset.IconList.RemoveAt(_asset.IconList.Count-1);
+                    _list.DoLayoutList();
+
+
+                    /**최종 변경사항을 저장한다....**/
+                    if (scope.changed){
+                        _assetObject.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(_asset);
+                        HierarchyIconDrawer.RefreshCacheData();
+                        EditorApplication.RepaintHierarchyWindow();
+                    }
                 }
-
-
-                /**최종 변경사항을 저장한다....**/
-                if (scope.changed){
-                    _assetObject.ApplyModifiedProperties();
-                    EditorUtility.SetDirty(_asset);
-                    HierarchyIconDrawer.RefreshCacheData();
-                    EditorApplication.RepaintHierarchyWindow();
-                }
+                /**==========================================**/
 
             }
+            EditorGUI.EndDisabledGroup();
+            /**-------------------------------------**/
         }
-
 
 
         /************************************************
@@ -200,7 +202,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
     {
         #region Omit
         int count = (_asset.IconList!=null? _asset.IconList.Count:0);
-        GUI.Label(rect, $"Component Icon List({count}/32)");
+        GUI.Label(rect, $"Component Icon List({count})");
         #endregion
     }
 

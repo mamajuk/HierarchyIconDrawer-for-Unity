@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
-using static UnityEngine.GraphicsBuffer;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -13,13 +12,21 @@ using UnityEditor;
 [InitializeOnLoad]
 public static class HierarchyIconDrawer
 {
+    private sealed class CacheData
+    {
+        public int StartIdx;
+        public int Count; 
+    }
+
+
     //===================================================
     //////                Fields...                //////
     ///==================================================
     private const string _AssetName = "HierarchyIconDrawerData.asset";
 
-    private static HierarchyIConDrawerAsset _asset;
-    private static Dictionary<int, int>     _cacheList = new Dictionary<int, int>();
+    private static HierarchyIConDrawerAsset   _asset;
+    private static Dictionary<int, CacheData> _cacheMap  = new Dictionary<int, CacheData>();
+    private static List<int>                  _cacheList = new List<int>();
 
 
 
@@ -43,31 +50,24 @@ public static class HierarchyIconDrawer
         /*******************************************************
          *    해당되는 아이콘들을 모두 표시한다....
          * ******/
-        int len       = _asset.IconList.Count;
-        int showCount = 0; 
-
-        if (_asset == null || _asset.ShowIcon == false || _cacheList==null || _cacheList.Count==0){
+        if (_asset == null || _asset.ShowIcon == false || _cacheMap==null || _cacheMap.Count==0){
             return;
         }
-
 
 
         /*********************************************************************
          *    캐싱된 데이터가 존재한다면, 캐싱된 인덱스의 아이콘만 모두 표시한다....
          * ******/
-        if (_cacheList.ContainsKey(instanceID) == false) return;
+        if (_cacheMap.ContainsKey(instanceID) == false) return;
 
-        for (int i=0; i<len; i++)
-        {
-            /***해당 컴포넌트를 사용하지 않는다면 스킵한다....**/
-            if((_cacheList[instanceID] & (1<<i))==0){
-                continue;
-            }
+        CacheData data       = _cacheMap[instanceID];
+        int       showCount  = 0;
+        int       goalIdx    = (data.StartIdx+data.Count);
 
-            HierarchyIConDrawerAsset.IconData curr = _asset.IconList[i];
+        for(int i=data.StartIdx; i<goalIdx; i++){
 
-            Rect iconRect = new Rect(selectionRect.xMax - (20 * showCount++), selectionRect.y, 16, 16);
-            GUI.DrawTexture(iconRect, curr.Icon);
+            Rect iconRect = new Rect( selectionRect.xMax - (20 * showCount++), selectionRect.y, 16, 16);
+            GUI.DrawTexture(iconRect, _asset.IconList[_cacheList[i]].Icon);
         }
         #endregion
     }
@@ -103,7 +103,7 @@ public static class HierarchyIconDrawer
             _asset = AssetDatabase.LoadAssetAtPath<HierarchyIConDrawerAsset>(GetAssetPath());
         }
 
-        if(_asset==null || _asset.IconList==null || _cacheList==null || _asset.IconList.Count==0){
+        if(_asset==null || _asset.IconList==null || _cacheMap==null || _cacheList==null || _asset.IconList.Count==0){
             return;
         }
 
@@ -116,10 +116,12 @@ public static class HierarchyIconDrawer
 
         int objCount   = sceneObjs.Length;
         int compCount  = _asset.IconList.Count;
-        int cacheValue = 0;
-
+        int startIdx   = 0;
+        int drawCount  = 0;
 
         _cacheList.Clear();
+        _cacheMap.Clear();
+
         for(int i=0; i<objCount; i++)
         {
             GameObject currObj = sceneObjs[i];
@@ -132,17 +134,18 @@ public static class HierarchyIconDrawer
                     continue;
                 }
 
-                cacheValue |= (1<<j);
+                drawCount++;
+                _cacheList.Add(j);
             }
 
             /**캐싱할 정보가 있다면 추가한다...*/
-            if (cacheValue!=0){
-                _cacheList.Add(currObj.GetInstanceID(), cacheValue);
+            if (drawCount>0){
+                _cacheMap.Add(currObj.GetInstanceID(), new CacheData() { StartIdx=startIdx, Count=drawCount });
             }
 
-            cacheValue = 0;
+            startIdx += drawCount;
+            drawCount = 0;
         }
-
         #endregion
     }
 
