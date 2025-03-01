@@ -26,6 +26,7 @@ public static class HierarchyIconDrawer
     private const float  _IconSize  = 20f;
     private const string _AssetName = "HierarchyIconDrawerData.asset";
 
+    private static float                      _nameMaxWidth  = 0f;
     private static GUIContent                 _sharedContent = new GUIContent();
     private static HierarchyIConDrawerAsset   _asset;
     private static Dictionary<int, CacheData> _cacheMap  = new Dictionary<int, CacheData>();
@@ -39,6 +40,10 @@ public static class HierarchyIconDrawer
     static HierarchyIconDrawer()
     {
         #region Omit
+        if (EditorApplication.isPlayingOrWillChangePlaymode){
+            return;
+        }
+
         RefreshCacheData();
 
         /**Hierarchy 창에 아이콘을 그리는 대리자를 등록한다....**/
@@ -76,10 +81,8 @@ public static class HierarchyIconDrawer
             case (HierarchyIConDrawerAsset.AligmentType.Middle):{
                _sharedContent.text = data.Name;
 
-               float middleWidth = (selectionRect.xMax*.6f); 
-               float nameWidth   = (EditorStyles.label.CalcSize(_sharedContent).x + selectionRect.x + _IconSize);
-
-               iconX = (nameWidth < middleWidth? middleWidth:nameWidth);
+               float nameWidth = (EditorStyles.label.CalcSize(_sharedContent).x + selectionRect.x + _IconSize);
+               iconX      = (nameWidth < _nameMaxWidth? _nameMaxWidth:(_nameMaxWidth=nameWidth));
                moveOffset = 20f;
                break;
             }
@@ -150,6 +153,7 @@ public static class HierarchyIconDrawer
         int startIdx   = 0;
         int drawCount  = 0;
 
+        _nameMaxWidth = 0f;
         _cacheList.Clear();
         _cacheMap.Clear();
 
