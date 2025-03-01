@@ -59,13 +59,13 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
     {
         if (GUI_Initialized()==false) return;
 
-        using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPos, false, true))
+        EditorGUI.BeginDisabledGroup(_showWnd);
         {
-            _scrollPos = scroll.scrollPosition;
-
             /**-------------------------------------**/
-            EditorGUI.BeginDisabledGroup(_showWnd);
+
+            using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPos, false, true))
             {
+                _scrollPos = scroll.scrollPosition;
 
                 /**========================================**/
                 using (var scope = new EditorGUI.ChangeCheckScope())
@@ -80,7 +80,8 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
 
 
                     /**최종 변경사항을 저장한다....**/
-                    if (scope.changed){
+                    if (scope.changed)
+                    {
                         _assetObject.ApplyModifiedProperties();
                         EditorUtility.SetDirty(_asset);
                         HierarchyIconDrawer.RefreshCacheData();
@@ -88,11 +89,12 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
                     }
                 }
                 /**==========================================**/
-
             }
-            EditorGUI.EndDisabledGroup();
+
             /**-------------------------------------**/
         }
+        EditorGUI.EndDisabledGroup();
+
 
 
         /************************************************
