@@ -220,17 +220,18 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
          *    내용물을 모조리 표시한다.....
          * *****/
         HierarchyIConDrawerAsset.IconData element = _asset.IconList[index];
-        float   fieldHeight    = (rect.height*.9f);
-        float   fieldY         = (rect.y);
-        float   oldLabelWidth  = EditorGUIUtility.labelWidth;
-        Rect    labelRect      = new Rect(rect.x, fieldY, 60f, fieldHeight);
-        Rect    iconRect       = new Rect(rect.x+62f, fieldY, 25f, fieldHeight);
-        Rect    classFieldRect = new Rect(rect.x+62f+27f, fieldY, (rect.width-62f-27f), fieldHeight);
+        float   fieldHeight     = (rect.height*.9f);
+        float   fieldY          = (rect.y);
+        Rect    labelRect       = new Rect(rect.x, fieldY, 60f, fieldHeight);
+        Rect    iconRect        = new Rect(rect.x+62f, fieldY, 25f, fieldHeight);
+        Rect    classFieldRect  = new Rect(rect.x+62f+27f, fieldY, (rect.width-62f-27f), fieldHeight);
+        Color   oldContentColor = GUI.contentColor; 
 
 
         /**아이콘이 그려지는 순서를 표시한다....**/
         EditorGUI.LabelField(labelRect, $"Icon ({index})");
 
+        
 
         /*************************************************
          *    사용할 아이콘을 갱신한다.....
@@ -247,10 +248,13 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
         }
 
 
+
         /*************************************************
          *   적용할 컴포넌트 종류를 갱신한다....   
          ******/
-        _classContent.text = element.ClassName;
+        _classContent.text  = element.DisplayName;
+        GUI.backgroundColor = (System.Type.GetType(element.ClassName)==null ? Color.red : oldContentColor);
+
         if (GUI.Button(classFieldRect, _classContent))
         {
             float width     = position.width;
@@ -285,6 +289,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
              EditorGUI.FocusTextInControl(_FocusName);
         }
 
+        GUI.backgroundColor = oldContentColor;
         #endregion
     }
 
@@ -323,6 +328,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
                 _strBuilder.Clear();
                 string name = _classList[i].Name;
                 string space = _classList[i].Namespace;
+                string assem = _classList[i].Assembly.GetName().Name;
                 string finalStr;
 
                 /**유효한 이름들을 추가한다...**/
@@ -338,7 +344,8 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
                 if (GUILayout.Button(_classContent, GUILayout.Width(_wndRect.width * .9f), GUILayout.Height(20f)))
                 {
                     _showWnd = false;
-                    _asset.IconList[_lastSelectedClassIdx].ClassName = finalStr;
+                    _asset.IconList[_lastSelectedClassIdx].ClassName = $"{finalStr}, {assem}";
+                    _asset.IconList[_lastSelectedClassIdx].DisplayName = finalStr;
                     _lastSelectedClassIdx = -1;
                     HierarchyIconDrawer.RefreshCacheData();
                     EditorApplication.RepaintHierarchyWindow();
@@ -377,7 +384,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
         return AppDomain.CurrentDomain
                     .GetAssemblies()
                     .SelectMany(assembly => assembly.GetTypes())
-                    .Where(type => type.IsSubclassOf(typeof(MonoBehaviour)))
+                    .Where(type => type.IsSubclassOf(typeof(Component)))
                     .ToList();
         #endregion
     }

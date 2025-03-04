@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using Unity.VisualScripting;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -30,8 +31,10 @@ public static class HierarchyIconDrawer
     private static float                      _nameMaxWidth  = 0f;
     private static GUIContent                 _sharedContent = new GUIContent();
     private static HierarchyIConDrawerAsset   _asset;
+
     private static Dictionary<int, CacheData> _cacheMap  = new Dictionary<int, CacheData>();
-    private static List<int>                  _cacheList = new List<int>();
+    private static List<System.Type>          _typeCache = new List<System.Type>();
+    private static List<int>                  _drawCache = new List<int>();
 
 
 
@@ -59,7 +62,7 @@ public static class HierarchyIconDrawer
         /*******************************************************
          *    해당되는 아이콘들을 모두 표시한다....
          * ******/
-        if (_asset == null || _asset.ShowIcon == false || _cacheMap==null || _cacheMap.Count==0){
+        if (_asset == null || _asset.ShowIcon == false){
             return;
         }
 
@@ -101,8 +104,12 @@ public static class HierarchyIconDrawer
         /**모든 아이콘들을 차례대로 표시한다....**/
         for(int i=data.StartIdx; i<goalIdx; i++)
         {
-            Rect iconRect = new Rect( iconX + (moveOffset * showCount++), selectionRect.y, 16, 16);
-            GUI.DrawTexture(iconRect, _asset.IconList[_cacheList[i]].Icon);
+            HierarchyIConDrawerAsset.IconData element = _asset.IconList[_drawCache[i]];
+
+            if (element.Icon!=null){
+                Rect iconRect = new Rect(iconX + (moveOffset * showCount++), selectionRect.y, 16, 16);
+                GUI.DrawTexture(iconRect, element.Icon);
+            }
         }
         #endregion
     }
@@ -132,20 +139,24 @@ public static class HierarchyIconDrawer
     {
         #region Omit
         /****************************************************
-         *     캐싱할 데이터를 저장할 에셋이 유효한가..?
+         *     캐싱을 해야하는지를 확인한다.....
          * *****/
-        if(_asset==null){
+        _drawCache.Clear();
+        _cacheMap.Clear();
+        _typeCache.Clear();
+
+        if (_asset==null){
             _asset = AssetDatabase.LoadAssetAtPath<HierarchyIConDrawerAsset>(GetAssetPath());
         }
 
-        if(_asset==null || _asset.IconList==null || _cacheMap==null || _cacheList==null || _asset.IconList.Count==0){
+        if (_asset==null || _asset.IconList==null || _asset.IconList.Count==0){
             return;
         }
 
 
 
-        /***********************************************************************
-         *     Hierarchy 창에 있는 모든 GameObject들의 정보를 적절히 캐싱한다...
+        /***************************************************************************************
+         *     Hierarchy 창에 있는 모든 GameObject들의 정보를 가져온 후, 캐싱 데이터를 초기화한다...
          * *****/
         GameObject[] sceneObjs = GameObject.FindObjectsOfType<GameObject>();
 
@@ -153,28 +164,40 @@ public static class HierarchyIconDrawer
         int compCount  = _asset.IconList.Count;
         int startIdx   = 0;
         int drawCount  = 0;
-
         _nameMaxWidth = 0f;
-        _cacheList.Clear();
-        _cacheMap.Clear();
 
-        for(int i=0; i<objCount; i++)
-        {
+
+
+        /******************************************************
+         *     컴포넌트들의 타입들을 캐싱한다....
+         * *****/
+        List<HierarchyIConDrawerAsset.IconData> compList = _asset.IconList;
+
+        for (int i = 0; i < compCount; i++){
+            _typeCache.Add(System.Type.GetType(compList[i].ClassName));
+        }
+
+
+
+        /***********************************************************************
+         *     Hierarchy 창에서 그려질 가능성이 있는 것들만 캐싱한다....
+         * *****/
+        for (int i=0; i<objCount; i++){
             GameObject currObj = sceneObjs[i];
+
+            /**어떤 컴포넌트를 가지고 있는지 확인한다...**/
             for(int j=0; j<compCount; j++)
             {
                 HierarchyIConDrawerAsset.IconData currComp = _asset.IconList[j];
-
-                /*해당 컴포넌트가 존재하지 않다면 스킵한다.....*/
-                if (currComp.Icon == null || currObj.GetComponent(currComp.ClassName) == null){
+                if (currComp.Icon == null || _typeCache[j]==null || currObj.GetComponent(_typeCache[j]) == null){
                     continue;
                 }
 
                 drawCount++;
-                _cacheList.Add(j);
+                _drawCache.Add(j);
             }
 
-            /**캐싱할 정보가 있다면 추가한다...*/
+            /**캐싱할 정보가 있다면 추가한다...***/
             if (drawCount>0){
                 bool isPrefab = (PrefabUtility.GetPrefabAssetType(currObj) != PrefabAssetType.NotAPrefab);
                 _cacheMap.Add(currObj.GetInstanceID(), new CacheData() { StartIdx=startIdx, Count=drawCount, Name=currObj.name, Offset=(isPrefab?20f:0f) });

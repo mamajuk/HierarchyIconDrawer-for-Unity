@@ -9,7 +9,8 @@ public class HierarchyIConDrawerAsset : ScriptableObject
     [System.Serializable]
     public class IconData
     {
-        public string    ClassName;   
+        public string    ClassName   = "";
+        public string    DisplayName = "";
         public Texture2D Icon;
     }
 
