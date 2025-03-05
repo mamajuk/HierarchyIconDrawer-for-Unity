@@ -1,9 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using System;
-using System.Text;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -29,7 +27,6 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
     private HierarchyIConDrawerAsset _asset;
     private GUIContent               _classContent;
     private GUIContent               _searchContent;
-    private StringBuilder            _strBuilder   = new StringBuilder();
 
     private SerializedObject  _assetObject;
     private ReorderableList   _list;
@@ -61,39 +58,32 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
 
         EditorGUI.BeginDisabledGroup(_showWnd);
         {
-            /**-------------------------------------**/
-
             using (var scroll = new EditorGUILayout.ScrollViewScope(_scrollPos, false, true))
             {
                 _scrollPos = scroll.scrollPosition;
 
-                /**========================================**/
+                /***아이콘 표시/정렬 방식에 대한 변화를 감지한다.....**/
                 using (var scope = new EditorGUI.ChangeCheckScope())
                 {
                     _asset.ShowIcon = EditorGUILayout.Toggle("Show Icon", _asset.ShowIcon);
-
                     _asset.Aligment = (HierarchyIConDrawerAsset.AligmentType)EditorGUILayout.EnumPopup("aligment", _asset.Aligment, GUILayout.Width(300f));
 
-                    GUI_ApplyPicker();
-
-                    /**처음 사용하는이를 위한 헬프박스를 표시한다....**/
-                    if (_asset.IconList.Count == 0){
-                        EditorGUILayout.HelpBox("Please specify the types of icons to be displayed in the Hierarchy window and assign each icon to its corresponding Component.", MessageType.Info);
-                    }
-
-                    _list.DoLayoutList();
-
-
-                    /**최종 변경사항을 저장한다....**/
-                    if (scope.changed)
-                    {
-                        _assetObject.ApplyModifiedProperties();
-                        EditorUtility.SetDirty(_asset);
-                        HierarchyIconDrawer.RefreshCacheData();
+                    if (scope.changed){
                         EditorApplication.RepaintHierarchyWindow();
                     }
                 }
-                /**==========================================**/
+
+
+                /**처음 사용하는이를 위한 헬프박스를 표시한다....**/
+                if (_asset.IconList.Count == 0){
+                    EditorGUILayout.HelpBox("Please specify the types of icons to be displayed in the Hierarchy window and assign each icon to its corresponding Component.", MessageType.Info);
+                }
+
+
+                /**아이콘 리스트를 표시한다...**/
+                GUI_ApplyPicker();
+
+                _list.DoLayoutList();
             }
 
             /**-------------------------------------**/
@@ -141,7 +131,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
             try
             {
                 if ((_asset = AssetDatabase.LoadAssetAtPath<HierarchyIConDrawerAsset>(path)) == null){
-                    _asset = new HierarchyIConDrawerAsset();
+                    _asset = ScriptableObject.CreateInstance<HierarchyIConDrawerAsset>();
                     AssetDatabase.CreateAsset(_asset, path);
                 }
             }
@@ -170,6 +160,8 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
             _list.multiSelect         = true;
             _list.drawHeaderCallback  = GUI_DrawListHeader;
             _list.drawElementCallback = GUI_DrawElement;
+            _list.onRemoveCallback    = GUI_RemoveElement;
+            _list.onReorderCallback   = GUI_ReorderElement;
         }
 
         if (_classContent==null){
@@ -191,14 +183,24 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
         *    선택된 아이콘/스크립트에 대한 최종 처리를  진행한다....
         * *****/
         string commandName = Event.current.commandName;
-        if (commandName == "ObjectSelectorUpdated")
-        {
-            /**아이콘에 대한 처리....**/
-            if (_lastSelectedIconIdx >= 0){
-                _asset.IconList[_lastSelectedIconIdx].Icon = EditorGUIUtility.GetObjectPickerObject() as Texture2D;
+
+        if(commandName!= "ObjectSelectorUpdated" || _lastSelectedIconIdx < 0){
+            return;
+        }
+
+        HierarchyIConDrawerAsset.IconData data = _asset.IconList[_lastSelectedIconIdx];
+
+        bool refresh = (data.Icon==null && System.Type.GetType(data.ClassName)!=null);
+        Texture2D tex;
+        if ((tex = (EditorGUIUtility.GetObjectPickerObject() as Texture2D))!=null){
+
+            data.Icon = tex;
+            if (refresh)
+            {
+                HierarchyIconDrawer.RefereshTypeCache();
+                HierarchyIconDrawer.RefreshDrawCache();
             }
 
-            HierarchyIconDrawer.RefreshCacheData();
             EditorApplication.RepaintHierarchyWindow();
             Repaint();
         }
@@ -325,35 +327,70 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
             int count = _classList.Count;
             for (int i = 0; i < count; i++) {
 
-                _strBuilder.Clear();
-                string name = _classList[i].Name;
-                string space = _classList[i].Namespace;
+                string name  = _classList[i].FullName;
                 string assem = _classList[i].Assembly.GetName().Name;
-                string finalStr;
 
-                /**유효한 이름들을 추가한다...**/
-                if (space != null) _strBuilder.Append(space).Append(".");
-                if (name != null) _strBuilder.Append(name);
 
                 /**검색 조건에서 벗어난다면 제외한다.....*/
-                if ((finalStr = _strBuilder.ToString()).IndexOf(_wndIndexStr) == -1) {
+                if (name==null || name.IndexOf(_wndIndexStr) == -1) {
                     continue;
                 }
 
-                _classContent.text = finalStr;
+                _classContent.text = name;
                 if (GUILayout.Button(_classContent, GUILayout.Width(_wndRect.width * .9f), GUILayout.Height(20f)))
                 {
-                    _showWnd = false;
-                    _asset.IconList[_lastSelectedClassIdx].ClassName = $"{finalStr}, {assem}";
-                    _asset.IconList[_lastSelectedClassIdx].DisplayName = finalStr;
+                    HierarchyIConDrawerAsset.IconData data = _asset.IconList[_lastSelectedClassIdx];
+                    data.ClassName        = $"{name}, {assem}";
+                    data.DisplayName      = name;
                     _lastSelectedClassIdx = -1;
-                    HierarchyIconDrawer.RefreshCacheData();
-                    EditorApplication.RepaintHierarchyWindow();
+                    _showWnd              = false;
+
+
+                    //아이콘도 유효하다면 갱신한다...
+                    if(data.Icon!=null){
+                        HierarchyIconDrawer.RefereshTypeCache();
+                        HierarchyIconDrawer.RefreshDrawCache();
+                        EditorApplication.RepaintHierarchyWindow();
+                    }
                 }
             }
         }
 
         GUI.DragWindow();
+        #endregion
+    }
+
+    private void GUI_RemoveElement(ReorderableList list)
+    {
+        #region Omit
+        List<HierarchyIConDrawerAsset.IconData>                data = _asset.IconList;
+        System.Collections.ObjectModel.ReadOnlyCollection<int> selects = list.selectedIndices;
+
+        int selectsCount = selects.Count;
+        int removeCount  = 0;
+
+
+        /**아이콘 리스트가 비어있지 않고, 지울 것이 있을 경우...**/
+        if(selectsCount>0){
+
+            for (int i = 0; i < selects.Count; i++)
+            {
+                data.RemoveAt(selects[i] - (removeCount++));
+            }
+
+            HierarchyIconDrawer.RefereshTypeCache();
+            HierarchyIconDrawer.RefreshDrawCache();
+            EditorApplication.RepaintHierarchyWindow();
+        }
+        #endregion
+    }
+
+    private void GUI_ReorderElement(ReorderableList list)
+    {
+        #region Omit
+        HierarchyIconDrawer.RefereshTypeCache();
+        HierarchyIconDrawer.RefreshDrawCache();
+        EditorApplication.RepaintHierarchyWindow();
         #endregion
     }
 
