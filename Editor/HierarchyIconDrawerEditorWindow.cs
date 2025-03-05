@@ -69,6 +69,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
                     _asset.Aligment = (HierarchyIConDrawerAsset.AligmentType)EditorGUILayout.EnumPopup("aligment", _asset.Aligment, GUILayout.Width(300f));
 
                     if (scope.changed){
+                        EditorUtility.SetDirty(_asset);
                         EditorApplication.RepaintHierarchyWindow();
                     }
                 }
@@ -202,6 +203,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
                 HierarchyIconDrawer.RefreshDrawCache();
             }
 
+            EditorUtility.SetDirty(_asset);
             EditorApplication.RepaintHierarchyWindow();
             Repaint();
         }
@@ -346,9 +348,10 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
                     _lastSelectedClassIdx = -1;
                     _showWnd              = false;
 
+                    EditorUtility.SetDirty(_asset);
 
                     //아이콘도 유효하다면 갱신한다...
-                    if(data.Icon!=null){
+                    if (data.Icon!=null){
                         HierarchyIconDrawer.RefereshTypeCache();
                         HierarchyIconDrawer.RefreshDrawCache();
                         EditorApplication.RepaintHierarchyWindow();
