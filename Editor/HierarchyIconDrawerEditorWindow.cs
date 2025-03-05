@@ -162,6 +162,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
             _list.drawElementCallback = GUI_DrawElement;
             _list.onRemoveCallback    = GUI_RemoveElement;
             _list.onReorderCallback   = GUI_ReorderElement;
+            _list.onCanRemoveCallback = GUI_CanRemove;
         }
 
         if (_classContent==null){
@@ -363,25 +364,29 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
     private void GUI_RemoveElement(ReorderableList list)
     {
         #region Omit
-        List<HierarchyIConDrawerAsset.IconData>                data = _asset.IconList;
+        List<HierarchyIConDrawerAsset.IconData>                data    = _asset.IconList;
         System.Collections.ObjectModel.ReadOnlyCollection<int> selects = list.selectedIndices;
 
         int selectsCount = selects.Count;
         int removeCount  = 0;
 
-
-        /**아이콘 리스트가 비어있지 않고, 지울 것이 있을 경우...**/
-        if(selectsCount>0){
-
-            for (int i = 0; i < selects.Count; i++)
-            {
+        /**선택된 것들이 있을 경우.....**/
+        if (selectsCount > 0)
+        {
+            for (int i = 0; i < selects.Count; i++){
                 data.RemoveAt(selects[i] - (removeCount++));
             }
-
-            HierarchyIconDrawer.RefereshTypeCache();
-            HierarchyIconDrawer.RefreshDrawCache();
-            EditorApplication.RepaintHierarchyWindow();
         }
+
+
+        /***아니라면 가장 마지막 원소를 삭제한다...**/
+        else data.RemoveAt(data.Count-1);
+
+
+        /**갱신한다....**/
+        HierarchyIconDrawer.RefereshTypeCache();
+        HierarchyIconDrawer.RefreshDrawCache();
+        EditorApplication.RepaintHierarchyWindow();
         #endregion
     }
 
@@ -392,6 +397,11 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
         HierarchyIconDrawer.RefreshDrawCache();
         EditorApplication.RepaintHierarchyWindow();
         #endregion
+    }
+
+    private bool GUI_CanRemove(ReorderableList list)
+    {
+        return (_asset.IconList.Count > 0);
     }
 
 
