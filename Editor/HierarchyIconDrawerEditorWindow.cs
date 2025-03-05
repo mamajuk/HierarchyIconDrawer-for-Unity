@@ -164,6 +164,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
             _list.onRemoveCallback    = GUI_RemoveElement;
             _list.onReorderCallback   = GUI_ReorderElement;
             _list.onCanRemoveCallback = GUI_CanRemove;
+            _list.onAddCallback       = GUI_AddElement;
         }
 
         if (_classContent==null){
@@ -407,6 +408,17 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
     private bool GUI_CanRemove(ReorderableList list)
     {
         return (_asset.IconList.Count > 0);
+    }
+
+    private void GUI_AddElement(ReorderableList list)
+    {
+        #region Omit
+        List<HierarchyIConDrawerAsset.IconData> data = _asset.IconList;
+        data.Add(new HierarchyIConDrawerAsset.IconData());
+
+        /**갱신한다....**/
+        HierarchyIconDrawer.RefereshTypeCache();
+        #endregion
     }
 
 
