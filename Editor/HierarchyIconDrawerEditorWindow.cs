@@ -186,18 +186,18 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
         * *****/
         string commandName = Event.current.commandName;
 
-        if(commandName!= "ObjectSelectorUpdated" || _lastSelectedIconIdx < 0){
+        if(_lastSelectedIconIdx < 0 || commandName!= "ObjectSelectorSelectionDone"){
             return;
         }
 
         HierarchyIConDrawerAsset.IconData data = _asset.IconList[_lastSelectedIconIdx];
 
-        bool refresh = (data.Icon==null && System.Type.GetType(data.ClassName)!=null);
+        bool prevIsNull = (data.Icon==null);
         Texture2D tex;
         if ((tex = (EditorGUIUtility.GetObjectPickerObject() as Texture2D))!=null){
 
             data.Icon = tex;
-            if (refresh)
+            if (prevIsNull && System.Type.GetType(data.ClassName) != null)
             {
                 HierarchyIconDrawer.RefereshTypeCache();
                 HierarchyIconDrawer.RefreshDrawCache();
@@ -206,6 +206,8 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
             EditorUtility.SetDirty(_asset);
             EditorApplication.RepaintHierarchyWindow();
             Repaint();
+
+            _lastSelectedIconIdx = -1;
         }
         #endregion
     }
