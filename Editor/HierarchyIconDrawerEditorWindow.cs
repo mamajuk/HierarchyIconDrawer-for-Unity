@@ -390,6 +390,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
 
 
         /**갱신한다....**/
+        EditorUtility.SetDirty(_asset);
         HierarchyIconDrawer.RefereshTypeCache();
         HierarchyIconDrawer.RefreshDrawCache();
         EditorApplication.RepaintHierarchyWindow();
@@ -417,6 +418,7 @@ public sealed class HierarchyIconDrawerEditorWindow : EditorWindow
         data.Add(new HierarchyIConDrawerAsset.IconData());
 
         /**갱신한다....**/
+        EditorUtility.SetDirty(_asset);
         HierarchyIconDrawer.RefereshTypeCache();
         #endregion
     }
